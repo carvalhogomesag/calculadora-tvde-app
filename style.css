@@ -1,0 +1,157 @@
+:root {
+    --primary-color: #0d122b;
+    --secondary-color: #1e293b;
+    --accent-color: #4f46e5;
+    --text-color: #e2e8f0;
+    --success-color: #22c55e;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --border-color: #334155;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #94a3b8;
+    margin-bottom: 40px;
+}
+
+.card {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid var(--border-color);
+}
+
+h2 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+.btn-add {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.btn-add:hover {
+    background-color: #4338ca;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 18px;
+}
+
+.summary-item.total {
+    font-weight: 700;
+    font-size: 20px;
+}
+
+#average-commission {
+    font-weight: bold;
+}
+
+.btn-reset {
+    background-color: var(--danger-color);
+    color: white;
+    margin-top: 20px;
+}
+
+.btn-reset:hover {
+    background-color: #d03d3d;
+}
+
+.trip-list-container {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 25px;
+    border: 1px solid var(--border-color);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    color: #94a3b8;
+}
+
+td {
+    font-weight: 500;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
