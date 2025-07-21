@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Comissão TVDE</title>
+    
+    <!-- Ligações para o PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +30,7 @@
                 </div>
                 <div class="form-group">
                     <label for="uber-fee">Montante Recebido pela Uber (€)</label>
-                    <input type="number" id="uber-fee" step="0.01" placeholder="Ex: 2.12" required>
+                    <input type="number" id="uber-fee" step="0.01" placeholder="Ex: 2.12 ou -1.50" required>
                     <small>Comissão líquida da Uber. Encontra em "Montante recebido pela Uber".</small>
                 </div>
                 <button type="submit" class="btn-add">Adicionar Viagem</button>
@@ -66,6 +72,21 @@
             </table>
         </div>
     </div>
+    
+    <!-- Script principal da aplicação -->
     <script src="script.js"></script>
+
+    <!-- Script para registar o Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js').then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+          });
+        }
+    </script>
 </body>
 </html>

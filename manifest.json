@@ -1,0 +1,21 @@
+{
+  "name": "Calculadora de Comissão TVDE",
+  "short_name": "Calc TVDE",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d122b",
+  "theme_color": "#4f46e5",
+  "description": "Calcule e audite a comissão da sua plataforma TVDE.",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
