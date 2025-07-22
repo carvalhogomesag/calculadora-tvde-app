@@ -61,7 +61,7 @@
         </div>
 
         <div class="card summary-card">
-            <h2>Resumo do Período <span id="summary-period-label">(Este Mês)</span></h2>
+            <h2>Resumo do Período <span id="summary-period-label">(Esta Semana)</span></h2>
             <div id="summary">
                 <div class="summary-item">
                     <span>Total Tarifa Utilizador:</span>
@@ -79,6 +79,31 @@
              <button id="reset-button" class="btn-reset">Limpar Tudo</button>
         </div>
         
+        <div id="analysis-features">
+            <div class="card filters-card">
+                <h2>Análise de Rendimentos</h2>
+                <div class="filter-controls">
+                    <button class="filter-btn" data-filter="today">Hoje</button>
+                    <button class="filter-btn active" data-filter="this-week">Esta Semana</button>
+                    <button class="filter-btn" data-filter="this-month">Este Mês</button>
+                    <button class="filter-btn" data-filter="custom">Personalizado</button>
+                </div>
+                <div id="custom-date-inputs" class="custom-date-wrapper" style="display:none;">
+                    <div>
+                        <label for="start-date">De:</label>
+                        <input type="date" id="start-date">
+                    </div>
+                    <div>
+                        <label for="end-date">Até:</label>
+                        <input type="date" id="end-date">
+                    </div>
+                </div>
+                 <div class="chart-container">
+                    <canvas id="earnings-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="trip-list-container">
             <h2>Viagens Adicionadas no Período</h2>
             <div class="table-wrapper">
@@ -94,28 +119,6 @@
                     </thead>
                     <tbody id="trip-list"></tbody>
                 </table>
-            </div>
-        </div>
-        
-        <div id="analysis-features">
-            <div class="card filters-card">
-                <h2>Análise de Rendimentos</h2>
-                <div class="filter-controls">
-                    <label for="date-filter">Filtrar por Período:</label>
-                    <select id="date-filter">
-                        <option value="all">Sempre</option>
-                        <option value="this-month" selected>Este Mês</option>
-                        <option value="last-month">Mês Passado</option>
-                        <option value="custom">Personalizado</option>
-                    </select>
-                </div>
-                <div id="custom-date-range" style="display:none;">
-                     <input type="date" id="start-date">
-                     <input type="date" id="end-date">
-                </div>
-                 <div class="chart-container">
-                    <canvas id="earnings-chart"></canvas>
-                </div>
             </div>
         </div>
 

@@ -495,3 +495,43 @@ h1, h2 {
 .btn-secondary:hover {
     background-color: var(--border-color);
 }
+
+/* Estilos para os novos botões de filtro */
+.filter-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto; /* Permite scroll se não couberem no ecrã */
+    padding-bottom: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap; /* Impede que o texto quebre linha */
+    transition: all 0.2s ease-in-out;
+}
+
+.filter-btn:hover {
+    background-color: var(--border-color);
+}
+
+.filter-btn.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.custom-date-wrapper {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+.custom-date-wrapper label {
+    font-size: 14px;
+}
