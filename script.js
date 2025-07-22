@@ -14,12 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- FUNÇÕES DE AUTENTICAÇÃO (VOLTAMOS PARA O POP-UP) ---
+    // --- FUNÇÕES DE AUTENTICAÇÃO (USANDO POP-UP) ---
     const signInWithGoogle = () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(error => { // <<< MUDANÇA: de volta para signInWithPopup
+        auth.signInWithPopup(provider).catch(error => {
             console.error("Erro no login com Google:", error);
-            // Os erros de pop-up que vimos antes (auth/cancelled-popup-request) podem voltar, mas o login deve funcionar.
             if (error.code !== 'auth/cancelled-popup-request') {
                 alert(`Erro ao tentar fazer login: ${error.message}`);
             }
@@ -31,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- 2. SELETORES DE ELEMENTOS HTML ---
-    // (Não há loader de autenticação aqui, pois o pop-up não recarrega a página)
     const guestWarning = document.getElementById('guest-warning');
     const loginLink = document.getElementById('login-link');
     const tripForm = document.getElementById('trip-form');
@@ -140,8 +138,17 @@ document.addEventListener('DOMContentLoaded', () => {
         tripList.innerHTML = '';
         filteredTrips.sort((a,b) => b.tripDate - a.tripDate).forEach(trip => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${trip.tripDate.toLocaleDateString('pt-PT')}</td><td>${trip.userFare.toFixed(2)} €</td><td>${trip.uberFee.toFixed(2)} €</td><td><button class="delete-btn" data-id="${trip.id}">🗑️</button></td>`;
-            if (trip.uberFee < 0) row.cells[2].style.color = 'var(--danger-color)';
+            const commissionPercentage = trip.userFare > 0 ? (trip.uberFee / trip.userFare) * 100 : 0;
+            const formattedDate = trip.tripDate.toLocaleDateString('pt-PT', {
+                day: '2-digit', month: '2-digit', year: '2-digit'
+            });
+            row.innerHTML = `<td>${formattedDate}</td><td>${trip.userFare.toFixed(2)} €</td><td>${trip.uberFee.toFixed(2)} €</td><td>${commissionPercentage.toFixed(1)} %</td><td><button class="delete-btn" data-id="${trip.id}">🗑️</button></td>`;
+            if (trip.uberFee < 0) {
+                row.cells[2].style.color = 'var(--danger-color)';
+                row.cells[3].style.color = 'var(--danger-color)';
+            } else if (commissionPercentage > 25) {
+                row.cells[3].style.color = 'var(--warning-color)';
+            }
             tripList.appendChild(row);
         });
         const totalUserFare = filteredTrips.reduce((sum, trip) => sum + trip.userFare, 0);
@@ -165,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalUberFee = filteredTrips.reduce((sum, trip) => sum + trip.uberFee, 0);
         const yourNetEarnings = totalUserFare - totalUberFee;
         const chartData = {
-            labels: ['Seu Rendimento Líquido', 'Comissão da Plataforma'],
+            labels: ['Seu Rendimento Líquido', 'Recebido Uber (€)'], // <<< LEGENDA ATUALIZADA
             datasets: [{ data: [yourNetEarnings, totalUberFee], backgroundColor: ['#4f46e5', '#f59e0b'], borderColor: '#1e293b', borderWidth: 2 }]
         };
         if (earningsChart) { earningsChart.destroy(); }
@@ -190,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- 6. LÓGICA DE AUTENTICAÇÃO (SIMPLIFICADA, SEM PERSISTÊNCIA MANUAL) ---
+    // --- 6. LÓGICA DE AUTENTICAÇÃO ---
     auth.onAuthStateChanged(user => {
         currentUser = user;
         if (user) {
@@ -207,7 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
             userEmailEl.textContent = '';
             guestWarning.style.display = 'block';
         }
-        // Carrega os dados para o estado atual (logado ou não)
         loadTrips();
     });
 
