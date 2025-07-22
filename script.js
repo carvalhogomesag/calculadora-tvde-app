@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- FUNÇÕES DE AUTENTICAÇÃO (definidas no topo para estarem disponíveis) ---
+    // --- FUNÇÕES DE AUTENTICAÇÃO ---
     const signInWithGoogle = () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         firebase.auth().signInWithPopup(provider).catch(error => {
@@ -27,30 +27,23 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.auth().signOut();
     };
 
-
     // --- 2. SELETORES DE ELEMENTOS HTML ---
-    // Formulário
+    const guestWarning = document.getElementById('guest-warning');
+    const loginLink = document.getElementById('login-link');
     const tripForm = document.getElementById('trip-form');
     const userFareInput = document.getElementById('user-fare');
     const uberFeeInput = document.getElementById('uber-fee');
     const tripDateInput = document.getElementById('trip-date');
-
-    // Resumo e Lista
     const tripList = document.getElementById('trip-list');
     const totalUserFareEl = document.getElementById('total-user-fare');
     const totalUberFeeEl = document.getElementById('total-uber-fee');
     const averageCommissionEl = document.getElementById('average-commission');
     const resetButton = document.getElementById('reset-button');
     const summaryPeriodLabel = document.getElementById('summary-period-label');
-
-    // Autenticação
     const loginButton = document.getElementById('login-button');
     const logoutButton = document.getElementById('logout-button');
     const userInfo = document.getElementById('user-info');
     const userEmailEl = document.getElementById('user-email');
-
-    // Funcionalidades Premium (Filtros e Gráfico)
-    const premiumFeatures = document.getElementById('premium-features');
     const dateFilter = document.getElementById('date-filter');
     const customDateRange = document.getElementById('custom-date-range');
     const startDateInput = document.getElementById('start-date');
@@ -62,9 +55,57 @@ document.addEventListener('DOMContentLoaded', () => {
     let filteredTrips = []; 
     let currentUser = null;
     let earningsChart = null;
+    let operationMode = 'local';
 
+    // --- 4. FUNÇÕES DE DADOS (COM LÓGICA DE MODO) ---
+    const loadTrips = async () => {
+        if (operationMode === 'firestore') {
+            const snapshot = await db.collection('trips').doc(currentUser.uid).collection('user_trips').orderBy('tripDate', 'desc').get();
+            allTrips = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return { id: doc.id, ...data, tripDate: data.tripDate.toDate() };
+            });
+        } else {
+            // No modo local, os dados já estão em memória. Apenas garantimos que está limpo no início.
+        }
+        applyFilters();
+    };
 
-    // --- 4. FUNÇÕES DE DADOS (Firestore & Lógica de Filtros) ---
+    const addTrip = async (trip) => {
+        if (operationMode === 'firestore') {
+            await db.collection('trips').doc(currentUser.uid).collection('user_trips').add(trip);
+        } else {
+            const tripWithId = { ...trip, id: Date.now().toString() };
+            allTrips.push(tripWithId);
+        }
+        await loadTrips();
+    };
+    
+    const deleteTrip = async (tripId) => {
+        if (!confirm('Tem a certeza que quer apagar esta viagem?')) return;
+        
+        if (operationMode === 'firestore') {
+            await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).delete();
+        } else {
+            allTrips = allTrips.filter(t => t.id !== tripId);
+        }
+        await loadTrips();
+    };
+
+    const resetData = async () => {
+        if (!confirm('Tem a certeza que quer apagar TODOS os dados do período?')) return;
+        
+        if (operationMode === 'firestore') {
+             alert('A função de apagar todos os dados da nuvem está em desenvolvimento.');
+             return;
+        } else {
+            allTrips = [];
+            filteredTrips = [];
+        }
+        updateUI();
+    };
+
+    // --- 5. LÓGICA DE FILTROS E UI ---
     const getDatesForFilter = (filterValue) => {
         const now = new Date();
         let start, end;
@@ -89,35 +130,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return { start, end };
     };
 
-    const loadTrips = async () => {
-        if (!currentUser) {
-            allTrips = [];
-            filteredTrips = [];
-            updateUI();
-            return;
-        }
-
-        const snapshot = await db.collection('trips').doc(currentUser.uid).collection('user_trips').orderBy('tripDate', 'desc').get();
-        allTrips = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                tripDate: data.tripDate.toDate() 
-            };
-        });
-        
-        applyFilters();
-    };
-
     const applyFilters = () => {
         const filterValue = dateFilter.value;
         const { start, end } = getDatesForFilter(filterValue);
         
+        let tripsToFilter = operationMode === 'firestore' ? allTrips : [...allTrips];
+
         if (start && end) {
-            filteredTrips = allTrips.filter(trip => trip.tripDate >= start && trip.tripDate <= end);
+            filteredTrips = tripsToFilter.filter(trip => trip.tripDate >= start && trip.tripDate <= end);
         } else {
-            filteredTrips = allTrips;
+            filteredTrips = tripsToFilter;
         }
         
         const selectedOption = dateFilter.options[dateFilter.selectedIndex];
@@ -125,24 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     };
 
-    const addTrip = async (trip) => {
-        if (!currentUser) {
-            alert("Faça login para adicionar viagens.");
-            return;
-        }
-        await db.collection('trips').doc(currentUser.uid).collection('user_trips').add(trip);
-        await loadTrips();
-    };
-    
-    const deleteTrip = async (tripId) => {
-        if (!confirm('Tem a certeza que quer apagar esta viagem?')) return;
-        if (!currentUser) return;
-        await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).delete();
-        await loadTrips();
-    };
-    
-
-    // --- 5. ATUALIZAÇÃO DA INTERFACE (UI) ---
     const updateUI = () => {
         updateSummaryAndList();
         updateChart();
@@ -150,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateSummaryAndList = () => {
         tripList.innerHTML = '';
-        filteredTrips.forEach(trip => {
+        filteredTrips.sort((a,b) => b.tripDate - a.tripDate).forEach(trip => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${trip.tripDate.toLocaleDateString('pt-PT')}</td>
@@ -176,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const updateChart = () => {
-        if (!currentUser || filteredTrips.length === 0) {
+        if (filteredTrips.length === 0) {
             if (earningsChart) {
                 earningsChart.destroy();
                 earningsChart = null;
@@ -205,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
             earningsChart.destroy();
         }
 
-        // Regista o plugin globalmente uma vez
         Chart.register(ChartDataLabels);
 
         earningsChart = new Chart(chartCanvas, {
@@ -215,10 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { color: '#e2e8f0' }
-                    },
+                    legend: { position: 'top', labels: { color: '#e2e8f0' } },
                     datalabels: {
                         formatter: (value, context) => {
                             const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
@@ -238,24 +238,28 @@ document.addEventListener('DOMContentLoaded', () => {
     auth.onAuthStateChanged(user => {
         currentUser = user;
         if (user) {
+            operationMode = 'firestore';
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             userEmailEl.textContent = user.email;
-            premiumFeatures.style.display = 'block';
-            loadTrips();
+            guestWarning.style.display = 'none';
         } else {
+            operationMode = 'local';
+            allTrips = []; 
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
             userEmailEl.textContent = '';
-            premiumFeatures.style.display = 'none';
-            allTrips = [];
-            filteredTrips = [];
-            updateUI();
+            guestWarning.style.display = 'block';
         }
+        loadTrips();
     });
 
-
     // --- 7. EVENT LISTENERS ---
+    loginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        signInWithGoogle();
+    });
+
     tripForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!tripDateInput.value) {
@@ -295,8 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginButton.addEventListener('click', signInWithGoogle);
     logoutButton.addEventListener('click', signOut);
-    // A lógica para resetar dados no Firestore precisa ser revista, mas deixamos por enquanto
-    resetButton.addEventListener('click', () => alert('A função de apagar todos os dados está em desenvolvimento.')); 
+    resetButton.addEventListener('click', resetData);
 
     tripDateInput.valueAsDate = new Date();
 });
