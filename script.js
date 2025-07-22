@@ -14,6 +14,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // --- FUNÇÕES DE AUTENTICAÇÃO (definidas no topo para estarem disponíveis) ---
+    const signInWithGoogle = () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider).catch(error => {
+            console.error("Erro no login com Google:", error);
+            alert(`Erro ao tentar fazer login: ${error.message}`);
+        });
+    };
+
+    const signOut = () => {
+        firebase.auth().signOut();
+    };
+
+
     // --- 2. SELETORES DE ELEMENTOS HTML ---
     // Formulário
     const tripForm = document.getElementById('trip-form');
@@ -44,13 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const chartCanvas = document.getElementById('earnings-chart');
 
     // --- 3. ESTADO DA APLICAÇÃO ---
-    let allTrips = []; // Guarda todas as viagens do utilizador
-    let filteredTrips = []; // Guarda as viagens após aplicar o filtro
+    let allTrips = []; 
+    let filteredTrips = []; 
     let currentUser = null;
     let earningsChart = null;
 
-    // --- 4. FUNÇÕES DE DADOS (Firestore & Lógica de Filtros) ---
 
+    // --- 4. FUNÇÕES DE DADOS (Firestore & Lógica de Filtros) ---
     const getDatesForFilter = (filterValue) => {
         const now = new Date();
         let start, end;
@@ -77,21 +91,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadTrips = async () => {
         if (!currentUser) {
-            // Se não está logado, não carrega nada da nuvem
             allTrips = [];
             filteredTrips = [];
             updateUI();
             return;
         }
 
-        // Carrega todas as viagens do utilizador do Firestore uma vez
         const snapshot = await db.collection('trips').doc(currentUser.uid).collection('user_trips').orderBy('tripDate', 'desc').get();
         allTrips = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 ...data,
-                // Converte Timestamp do Firebase para Date do JS
                 tripDate: data.tripDate.toDate() 
             };
         });
@@ -106,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (start && end) {
             filteredTrips = allTrips.filter(trip => trip.tripDate >= start && trip.tripDate <= end);
         } else {
-            filteredTrips = allTrips; // Sem filtro de data
+            filteredTrips = allTrips;
         }
         
         const selectedOption = dateFilter.options[dateFilter.selectedIndex];
@@ -120,18 +131,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         await db.collection('trips').doc(currentUser.uid).collection('user_trips').add(trip);
-        await loadTrips(); // Recarrega e aplica filtros
+        await loadTrips();
     };
     
     const deleteTrip = async (tripId) => {
         if (!confirm('Tem a certeza que quer apagar esta viagem?')) return;
         if (!currentUser) return;
         await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).delete();
-        await loadTrips(); // Recarrega e aplica filtros
+        await loadTrips();
     };
     
+
     // --- 5. ATUALIZAÇÃO DA INTERFACE (UI) ---
-    
     const updateUI = () => {
         updateSummaryAndList();
         updateChart();
@@ -165,88 +176,84 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const updateChart = () => {
-        if (!currentUser) {
-            if (earningsChart) earningsChart.destroy();
+        if (!currentUser || filteredTrips.length === 0) {
+            if (earningsChart) {
+                earningsChart.destroy();
+                earningsChart = null;
+            }
+            chartCanvas.style.display = 'none';
             return;
         }
-
-        // Processar dados para o gráfico
-        const dataByDay = filteredTrips.reduce((acc, trip) => {
-            const day = trip.tripDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-            if (!acc[day]) {
-                acc[day] = { userFare: 0, uberFee: 0 };
-            }
-            acc[day].userFare += trip.userFare;
-            acc[day].uberFee += trip.uberFee;
-            return acc;
-        }, {});
-
-        const sortedDays = Object.keys(dataByDay).sort();
-        const labels = sortedDays.map(day => new Date(day+'T00:00:00').toLocaleDateString('pt-PT', {day:'2-digit', month:'short'}));
-        const userFareData = sortedDays.map(day => dataByDay[day].userFare);
-        const uberFeeData = sortedDays.map(day => dataByDay[day].uberFee);
-
-        // Criar ou atualizar o gráfico
-        const chartData = {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Tarifa Cliente (€)',
-                    data: userFareData,
-                    backgroundColor: '#4f46e5',
-                },
-                {
-                    label: 'Comissão Uber (€)',
-                    data: uberFeeData,
-                    backgroundColor: '#f59e0b',
-                }
-            ]
-        };
         
+        chartCanvas.style.display = 'block';
+
+        const totalUserFare = filteredTrips.reduce((sum, trip) => sum + trip.userFare, 0);
+        const totalUberFee = filteredTrips.reduce((sum, trip) => sum + trip.uberFee, 0);
+        const yourNetEarnings = totalUserFare - totalUberFee;
+
+        const chartData = {
+            labels: ['Seu Rendimento Líquido', 'Comissão da Plataforma'],
+            datasets: [{
+                data: [yourNetEarnings, totalUberFee],
+                backgroundColor: ['#4f46e5', '#f59e0b'],
+                borderColor: '#1e293b',
+                borderWidth: 2
+            }]
+        };
+
         if (earningsChart) {
-            earningsChart.data = chartData;
-            earningsChart.update();
-        } else {
-            earningsChart = new Chart(chartCanvas, {
-                type: 'bar',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
+            earningsChart.destroy();
+        }
+
+        // Regista o plugin globalmente uma vez
+        Chart.register(ChartDataLabels);
+
+        earningsChart = new Chart(chartCanvas, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: '#e2e8f0' }
+                    },
+                    datalabels: {
+                        formatter: (value, context) => {
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? (value / total * 100).toFixed(1) + '%' : '0%';
+                            return `€${value.toFixed(2)}\n(${percentage})`;
+                        },
+                        color: '#fff',
+                        font: { weight: 'bold', size: 14 },
+                        textAlign: 'center',
                     }
                 }
-            });
-        }
+            }
+        });
     };
 
     // --- 6. LÓGICA DE AUTENTICAÇÃO ---
     auth.onAuthStateChanged(user => {
         currentUser = user;
         if (user) {
-            // Utilizador está logado
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             userEmailEl.textContent = user.email;
-            premiumFeatures.style.display = 'block'; // Mostra funcionalidades premium
+            premiumFeatures.style.display = 'block';
             loadTrips();
         } else {
-            // Utilizador não está logado
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
             userEmailEl.textContent = '';
-            premiumFeatures.style.display = 'none'; // Esconde funcionalidades premium
+            premiumFeatures.style.display = 'none';
             allTrips = [];
             filteredTrips = [];
             updateUI();
         }
     });
 
-    const signInWithGoogle = () => { /* ... (sem alterações) ... */ };
-    const signOut = () => { /* ... (sem alterações) ... */ };
-    // Cole as funções signInWithGoogle e signOut da versão anterior aqui.
-    // Para poupar espaço, não as repeti.
 
     // --- 7. EVENT LISTENERS ---
     tripForm.addEventListener('submit', async (e) => {
@@ -259,12 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const newTrip = { 
             userFare: parseFloat(userFareInput.value),
             uberFee: parseFloat(uberFeeInput.value),
-            tripDate: new Date(tripDateInput.value), // Salva como objeto Date
+            tripDate: new Date(tripDateInput.value),
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         await addTrip(newTrip);
         tripForm.reset();
-        tripDateInput.valueAsDate = new Date(); // Preenche a data de hoje por defeito
+        tripDateInput.valueAsDate = new Date();
     });
     
     dateFilter.addEventListener('change', () => {
@@ -279,30 +286,17 @@ document.addEventListener('DOMContentLoaded', () => {
     startDateInput.addEventListener('change', applyFilters);
     endDateInput.addEventListener('change', applyFilters);
     
-    // Outros Listeners... (copie-os da versão anterior)
     tripList.addEventListener('click', (e) => {
         if (e.target.classList.contains('delete-btn')) {
             const tripId = e.target.getAttribute('data-id');
             deleteTrip(tripId);
         }
     });
+
     loginButton.addEventListener('click', signInWithGoogle);
     logoutButton.addEventListener('click', signOut);
-    resetButton.addEventListener('click', () => { /* A lógica de reset precisa ser adaptada */ });
+    // A lógica para resetar dados no Firestore precisa ser revista, mas deixamos por enquanto
+    resetButton.addEventListener('click', () => alert('A função de apagar todos os dados está em desenvolvimento.')); 
 
-    // Preenche a data de hoje no formulário por defeito
     tripDateInput.valueAsDate = new Date();
 });
-
-// Funções de Autenticação (fora do DOMContentLoaded para melhor organização)
-const signInWithGoogle = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).catch(error => {
-        console.error("Erro no login com Google:", error);
-        alert(`Erro ao tentar fazer login: ${error.message}`);
-    });
-};
-
-const signOut = () => {
-    firebase.auth().signOut();
-};
