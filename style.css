@@ -535,3 +535,18 @@ h1, h2 {
 .custom-date-wrapper label {
     font-size: 14px;
 }
+
+/* ========================================= */
+/*       ESTILOS PARA O BANNER DE COOKIES    */
+/* ========================================= */
+
+:root {
+    /* Cores do CookieConsent */
+    --cc-bg: var(--secondary-color);
+    --cc-text: var(--text-color);
+    --cc-btn-primary-bg: var(--accent-color);
+    --cc-btn-primary-text: white;
+    --cc-btn-secondary-bg: var(--border-color);
+    --cc-btn-secondary-text: var(--text-color);
+    --cc-border: var(--border-color);
+}
