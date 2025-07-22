@@ -155,3 +155,49 @@ td {
 tbody tr:last-child td {
     border-bottom: none;
 }
+
+/* Estilos para Autenticação */
+#auth-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#login-button, #logout-button {
+    width: auto;
+    padding: 10px 20px;
+    background-color: #22c55e;
+    font-size: 14px;
+}
+
+#logout-button {
+    background-color: var(--warning-color);
+    margin-left: 10px;
+}
+
+#user-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background-color: var(--primary-color);
+    border-radius: 8px;
+}
+
+#user-email {
+    margin-right: 15px;
+    font-weight: 500;
+}
+
+/* Ajuste na tabela para o botão de apagar */
+td:last-child, th:last-child {
+    text-align: center;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 5px;
+}

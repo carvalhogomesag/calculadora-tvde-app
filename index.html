@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Comissão TVDE</title>
     
-    <!-- Ligações para o PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
     <link rel="apple-touch-icon" href="icon-192x192.png">
@@ -17,6 +16,15 @@
 </head>
 <body>
     <div class="container">
+
+        <div id="auth-container">
+            <button id="login-button">Login com Google</button>
+            <div id="user-info" style="display: none;">
+                <span id="user-email"></span>
+                <button id="logout-button">Sair</button>
+            </div>
+        </div>
+
         <h1>Calculadora de Comissão TVDE</h1>
         <p class="subtitle">Adicione os valores de cada viagem para calcular a comissão média da plataforma.</p>
         
@@ -26,12 +34,12 @@
                 <div class="form-group">
                     <label for="user-fare">Tarifa do Utilizador (€)</label>
                     <input type="number" id="user-fare" step="0.01" placeholder="Ex: 15.95" required>
-                    <small>Valor total pago pelo cliente, antes de promoções. Encontra em "Resumo do montante cobrado".</small>
+                    <small>Valor total pago pelo cliente, antes de promoções.</small>
                 </div>
                 <div class="form-group">
                     <label for="uber-fee">Montante Recebido pela Uber (€)</label>
                     <input type="number" id="uber-fee" step="0.01" placeholder="Ex: 2.12 ou -1.50" required>
-                    <small>Comissão líquida da Uber. Encontra em "Montante recebido pela Uber".</small>
+                    <small>Comissão líquida da Uber. Pode ser negativo.</small>
                 </div>
                 <button type="submit" class="btn-add">Adicionar Viagem</button>
             </form>
@@ -64,27 +72,25 @@
                         <th>Tarifa Cliente</th>
                         <th>Comissão Uber</th>
                         <th>Comissão (%)</th>
+                        <th>Ação</th>
                     </tr>
                 </thead>
-                <tbody id="trip-list">
-                    <!-- As viagens adicionadas aparecerão aqui -->
-                </tbody>
+                <tbody id="trip-list"></tbody>
             </table>
         </div>
     </div>
     
-    <!-- Script principal da aplicação -->
+    <!-- SDKs do Firebase (coloque-os ANTES do seu script.js) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    
     <script src="script.js"></script>
 
-    <!-- Script para registar o Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
           window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js').then(registration => {
-              console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            }, err => {
-              console.log('ServiceWorker registration failed: ', err);
-            });
+            navigator.serviceWorker.register('/service-worker.js');
           });
         }
     </script>
