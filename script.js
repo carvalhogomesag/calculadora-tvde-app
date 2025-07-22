@@ -10,22 +10,29 @@ document.addEventListener('DOMContentLoaded', () => {
   appId: "1:358758507490:web:40f8105d5ddb1438b24fbb"
 };
 
-    firebase.initializeApp(firebaseConfig);
+ firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- FUNÇÕES DE AUTENTICAÇÃO ---
+    // --- FUNÇÕES DE AUTENTICAÇÃO (ATUALIZADAS) ---
     const signInWithGoogle = () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        firebase.auth().signInWithPopup(provider).catch(error => {
-            console.error("Erro no login com Google:", error);
-            alert(`Erro ao tentar fazer login: ${error.message}`);
-        });
+        auth.signInWithRedirect(provider); // MUDANÇA: Usa redirecionamento em vez de pop-up
     };
 
     const signOut = () => {
         firebase.auth().signOut();
     };
+
+    // --- LÓGICA PARA TRATAR O RETORNO DO LOGIN ---
+    auth.getRedirectResult()
+        .then((result) => {
+            if (result.user) {
+                console.log("Login via redirect bem-sucedido para:", result.user.email);
+            }
+        }).catch((error) => {
+            console.error("Erro no retorno do redirect:", error);
+        });
 
     // --- 2. SELETORES DE ELEMENTOS HTML ---
     const guestWarning = document.getElementById('guest-warning');
@@ -304,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutButton.addEventListener('click', signOut);
     resetButton.addEventListener('click', resetData);
     
-    // --- Lógica do Modal de Sugestões ---
+    // Lógica do Modal de Sugestões
     suggestionFab.addEventListener('click', () => {
         suggestionModal.style.display = 'flex';
     });
@@ -353,6 +360,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inicia a data no formulário com o dia de hoje
     tripDateInput.valueAsDate = new Date();
 });
