@@ -249,3 +249,68 @@ td:last-child, th:last-child {
     font-weight: bold;
     text-decoration: underline;
 }
+
+/* ========================================= */
+/*          ESTILOS PARA RESPONSIVIDADE      */
+/* ========================================= */
+
+/* Aplica estes estilos em ecrãs com 768px de largura ou menos */
+@media (max-width: 768px) {
+
+    /* Reduz o espaçamento geral da aplicação */
+    .container {
+        padding: 10px;
+    }
+
+    .card {
+        padding: 15px;
+    }
+
+    /* Diminui os títulos */
+    h1 {
+        font-size: 24px;
+    }
+
+    h2 {
+        font-size: 18px;
+    }
+    
+    /* Ajusta o tamanho da fonte nos formulários e botões */
+    .form-group label {
+        font-size: 14px;
+    }
+
+    button {
+        font-size: 15px;
+        padding: 14px;
+    }
+
+    #login-button, #logout-button {
+        padding: 8px 15px;
+    }
+
+    /* Reduz o tamanho da fonte no resumo */
+    .summary-item {
+        font-size: 16px;
+    }
+
+    .summary-item.total {
+        font-size: 18px;
+    }
+
+    /* Reduz a altura do contentor do gráfico para ocupar menos espaço vertical */
+    .chart-container {
+        height: 250px;
+    }
+
+    /* --- A MÁGICA PARA A TABELA --- */
+    .table-wrapper {
+        overflow-x: auto; /* Adiciona o scroll horizontal quando necessário */
+        -webkit-overflow-scrolling: touch; /* Melhora a experiência de scroll em iOS */
+    }
+
+    table {
+        min-width: 500px; /* Força a tabela a ter uma largura mínima, ativando o scroll */
+        width: 100%;
+    }
+}
