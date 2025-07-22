@@ -49,6 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDateInput = document.getElementById('start-date');
     const endDateInput = document.getElementById('end-date');
     const chartCanvas = document.getElementById('earnings-chart');
+    const suggestionFab = document.getElementById('suggestion-fab');
+    const suggestionModal = document.getElementById('suggestion-modal');
+    const suggestionForm = document.getElementById('suggestion-form');
+    const suggestionText = document.getElementById('suggestion-text');
+    const modalCloseBtn = document.querySelector('.modal-close-btn');
 
     // --- 3. ESTADO DA APLICAÇÃO ---
     let allTrips = []; 
@@ -65,8 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 return { id: doc.id, ...data, tripDate: data.tripDate.toDate() };
             });
-        } else {
-            // No modo local, os dados já estão em memória. Apenas garantimos que está limpo no início.
         }
         applyFilters();
     };
@@ -134,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterValue = dateFilter.value;
         const { start, end } = getDatesForFilter(filterValue);
         
-        let tripsToFilter = operationMode === 'firestore' ? allTrips : [...allTrips];
+        let tripsToFilter = [...allTrips];
 
         if (start && end) {
             filteredTrips = tripsToFilter.filter(trip => trip.tripDate >= start && trip.tripDate <= end);
@@ -300,6 +303,56 @@ document.addEventListener('DOMContentLoaded', () => {
     loginButton.addEventListener('click', signInWithGoogle);
     logoutButton.addEventListener('click', signOut);
     resetButton.addEventListener('click', resetData);
+    
+    // --- Lógica do Modal de Sugestões ---
+    suggestionFab.addEventListener('click', () => {
+        suggestionModal.style.display = 'flex';
+    });
 
+    modalCloseBtn.addEventListener('click', () => {
+        suggestionModal.style.display = 'none';
+    });
+
+    suggestionModal.addEventListener('click', (e) => {
+        if (e.target === suggestionModal) {
+            suggestionModal.style.display = 'none';
+        }
+    });
+
+    suggestionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const suggestionContent = suggestionText.value.trim();
+        const submitButton = suggestionForm.querySelector('button[type="submit"]');
+        
+        if (!suggestionContent) {
+            alert('Por favor, escreva a sua sugestão.');
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando...';
+
+        try {
+            await db.collection('suggestions').add({
+                text: suggestionContent,
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                userEmail: currentUser ? currentUser.email : 'Anónimo',
+                userAgent: navigator.userAgent
+            });
+
+            alert('Obrigado! A sua sugestão foi enviada com sucesso.');
+            suggestionText.value = '';
+            suggestionModal.style.display = 'none';
+
+        } catch (error) {
+            console.error("Erro ao enviar sugestão:", error);
+            alert('Ocorreu um erro ao enviar a sua sugestão. Por favor, tente novamente.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Enviar Sugestão';
+        }
+    });
+
+    // Inicia a data no formulário com o dia de hoje
     tripDateInput.valueAsDate = new Date();
 });

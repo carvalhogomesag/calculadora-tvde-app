@@ -25,7 +25,10 @@
             </div>
         </div>
 
-        <h1>Calculadora de Comissão TVDE</h1>
+        <div class="title-container">
+            <h1>Calculadora de Comissão TVDE</h1>
+            <span class="beta-badge">BETA</span>
+        </div>
 
         <!-- AVISO PARA UTILIZADOR NÃO LOGADO -->
         <div id="guest-warning" class="card" style="display: none; background-color: var(--warning-color); color: var(--primary-color);">
@@ -80,7 +83,6 @@
         
         <div class="trip-list-container">
             <h2>Viagens Adicionadas no Período</h2>
-            <!-- DIV ADICIONADO PARA ENVOLVER A TABELA -->
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -119,6 +121,25 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- BOTÃO FLUTUANTE PARA SUGESTÕES -->
+    <button id="suggestion-fab" title="Deixar uma sugestão">💡</button>
+
+    <!-- MODAL DE SUGESTÕES (escondido por defeito) -->
+    <div id="suggestion-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close-btn">×</button>
+            <h2>Deixe a sua Sugestão</h2>
+            <p>O seu feedback é essencial para melhorar esta ferramenta. Obrigado por participar!</p>
+            <form id="suggestion-form">
+                <div class="form-group">
+                    <label for="suggestion-text">A sua sugestão, ideia ou relato de erro:</label>
+                    <textarea id="suggestion-text" rows="5" required></textarea>
+                </div>
+                <button type="submit" class="btn-add">Enviar Sugestão</button>
+            </form>
+        </div>
     </div>
     
     <!-- SDKs (Firebase e Chart.js) -->
