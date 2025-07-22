@@ -201,3 +201,44 @@ td:last-child, th:last-child {
     font-size: 18px;
     padding: 5px;
 }
+
+/* Estilos para Filtros e Gráficos */
+.filters-card {
+    background-color: var(--primary-color);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+#date-filter, #start-date, #end-date {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+#custom-date-range {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+#summary-period-label {
+    font-size: 14px;
+    color: #94a3b8;
+    font-weight: 400;
+}
