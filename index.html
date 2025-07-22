@@ -33,31 +33,9 @@
             <p>Você está a usar a aplicação sem login. Os seus dados, incluindo os do gráfico, serão perdidos ao fechar a página. <strong><a href="#" id="login-link">Faça login com o Google</a></strong> para salvar o seu histórico e aceder de qualquer dispositivo!</p>
         </div>
         
-        <!-- SECÇÃO DE ANÁLISE (agora visível para todos) -->
-        <div id="analysis-features">
-            <div class="card filters-card">
-                <h2>Análise de Rendimentos</h2>
-                <div class="filter-controls">
-                    <label for="date-filter">Filtrar por Período:</label>
-                    <select id="date-filter">
-                        <option value="all">Sempre</option>
-                        <option value="this-month" selected>Este Mês</option>
-                        <option value="last-month">Mês Passado</option>
-                        <option value="custom">Personalizado</option>
-                    </select>
-                </div>
-                <div id="custom-date-range" style="display:none;">
-                     <input type="date" id="start-date">
-                     <input type="date" id="end-date">
-                </div>
-                 <div class="chart-container">
-                    <canvas id="earnings-chart"></canvas>
-                </div>
-            </div>
-        </div>
-        
         <p class="subtitle">Adicione os valores de cada viagem para calcular a comissão média da plataforma.</p>
         
+        <!-- 1. FORMULÁRIO DE ENTRADA -->
         <div class="card form-card">
             <h2>Adicionar Nova Viagem</h2>
             <form id="trip-form">
@@ -80,6 +58,7 @@
             </form>
         </div>
 
+        <!-- 2. RESUMO E TABELA DE VIAGENS -->
         <div class="card summary-card">
             <h2>Resumo do Período <span id="summary-period-label">(Este Mês)</span></h2>
             <div id="summary">
@@ -113,6 +92,30 @@
                 <tbody id="trip-list"></tbody>
             </table>
         </div>
+        
+        <!-- 3. SECÇÃO DE ANÁLISE (MOVIDA PARA O FIM) -->
+        <div id="analysis-features">
+            <div class="card filters-card">
+                <h2>Análise de Rendimentos</h2>
+                <div class="filter-controls">
+                    <label for="date-filter">Filtrar por Período:</label>
+                    <select id="date-filter">
+                        <option value="all">Sempre</option>
+                        <option value="this-month" selected>Este Mês</option>
+                        <option value="last-month">Mês Passado</option>
+                        <option value="custom">Personalizado</option>
+                    </select>
+                </div>
+                <div id="custom-date-range" style="display:none;">
+                     <input type="date" id="start-date">
+                     <input type="date" id="end-date">
+                </div>
+                 <div class="chart-container">
+                    <canvas id="earnings-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
     </div>
     
     <!-- SDKs (Firebase e Chart.js) -->
