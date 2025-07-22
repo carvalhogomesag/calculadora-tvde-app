@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- FUNÇÕES DE AUTENTICAÇÃO (USANDO POP-UP) ---
+    // --- FUNÇÕES DE AUTENTICAÇÃO ---
     const signInWithGoogle = () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch(error => {
@@ -24,12 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
-
     const signOut = () => {
         firebase.auth().signOut();
     };
 
     // --- 2. SELETORES DE ELEMENTOS HTML ---
+    const formTitle = document.getElementById('form-title');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const guestWarning = document.getElementById('guest-warning');
     const loginLink = document.getElementById('login-link');
     const tripForm = document.getElementById('trip-form');
@@ -63,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let earningsChart = null;
     let operationMode = 'local';
+    let editingTripId = null;
 
     // --- 4. FUNÇÕES DE DADOS ---
     const loadTrips = async () => {
@@ -104,8 +106,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateUI();
     };
-
+    const updateTrip = async (tripId, updatedData) => {
+        if (operationMode === 'firestore') {
+            await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).update(updatedData);
+        } else {
+            const tripIndex = allTrips.findIndex(t => t.id === tripId);
+            if (tripIndex > -1) {
+                allTrips[tripIndex] = { ...allTrips[tripIndex], ...updatedData };
+            }
+        }
+        await loadTrips();
+    };
+    
     // --- 5. LÓGICA DE FILTROS E UI ---
+    const startEditMode = (tripId) => {
+        editingTripId = tripId;
+        const trip = allTrips.find(t => t.id === tripId);
+        if (!trip) return;
+        userFareInput.value = trip.userFare;
+        uberFeeInput.value = trip.uberFee;
+        tripDateInput.value = trip.tripDate.toISOString().split('T')[0];
+        formTitle.textContent = "Editar Viagem";
+        tripForm.querySelector('.btn-add').textContent = "Guardar Alterações";
+        cancelEditBtn.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEditMode = () => {
+        editingTripId = null;
+        tripForm.reset();
+        tripDateInput.valueAsDate = new Date();
+        formTitle.textContent = "Adicionar Nova Viagem";
+        tripForm.querySelector('.btn-add').textContent = "Adicionar Viagem";
+        cancelEditBtn.style.display = 'none';
+    };
+
     const getDatesForFilter = (filterValue) => {
         const now = new Date();
         let start, end;
@@ -139,10 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredTrips.sort((a,b) => b.tripDate - a.tripDate).forEach(trip => {
             const row = document.createElement('tr');
             const commissionPercentage = trip.userFare > 0 ? (trip.uberFee / trip.userFare) * 100 : 0;
-            const formattedDate = trip.tripDate.toLocaleDateString('pt-PT', {
-                day: '2-digit', month: '2-digit', year: '2-digit'
-            });
-            row.innerHTML = `<td>${formattedDate}</td><td>${trip.userFare.toFixed(2)} €</td><td>${trip.uberFee.toFixed(2)} €</td><td>${commissionPercentage.toFixed(1)} %</td><td><button class="delete-btn" data-id="${trip.id}">🗑️</button></td>`;
+            const formattedDate = trip.tripDate.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' });
+            row.innerHTML = `<td>${formattedDate}</td><td>${trip.userFare.toFixed(2)} €</td><td>${trip.uberFee.toFixed(2)} €</td><td>${commissionPercentage.toFixed(1)} %</td><td><button class="action-btn edit-btn" data-id="${trip.id}" title="Editar">✏️</button><button class="action-btn delete-btn" data-id="${trip.id}" title="Apagar">🗑️</button></td>`;
             if (trip.uberFee < 0) {
                 row.cells[2].style.color = 'var(--danger-color)';
                 row.cells[3].style.color = 'var(--danger-color)';
@@ -157,9 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         totalUserFareEl.textContent = `${totalUserFare.toFixed(2)} €`;
         totalUberFeeEl.textContent = `${totalUberFee.toFixed(2)} €`;
         averageCommissionEl.textContent = `${averageCommission.toFixed(2)} %`;
-        if (averageCommission > 25) averageCommissionEl.style.color = 'var(--danger-color)';
-        else if (averageCommission > 22) averageCommissionEl.style.color = 'var(--warning-color)';
-        else averageCommissionEl.style.color = 'var(--success-color)';
+        if (averageCommission > 25) averageCommissionEl.style.color = 'var(--danger-color)'; else if (averageCommission > 22) averageCommissionEl.style.color = 'var(--warning-color)'; else averageCommissionEl.style.color = 'var(--success-color)';
     };
     const updateChart = () => {
         if (filteredTrips.length === 0) {
@@ -172,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalUberFee = filteredTrips.reduce((sum, trip) => sum + trip.uberFee, 0);
         const yourNetEarnings = totalUserFare - totalUberFee;
         const chartData = {
-            labels: ['Seu Rendimento Líquido', 'Recebido Uber (€)'], // <<< LEGENDA ATUALIZADA
+            labels: ['Seu Rendimento Líquido', 'Recebido Uber (€)'],
             datasets: [{ data: [yourNetEarnings, totalUberFee], backgroundColor: ['#4f46e5', '#f59e0b'], borderColor: '#1e293b', borderWidth: 2 }]
         };
         if (earningsChart) { earningsChart.destroy(); }
@@ -209,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             operationMode = 'local';
             allTrips = []; 
+            cancelEditMode(); // Garante que sai do modo de edição ao fazer logout
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
             userEmailEl.textContent = '';
@@ -218,35 +250,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 7. EVENT LISTENERS ---
-    loginLink.addEventListener('click', (e) => { e.preventDefault(); signInWithGoogle(); });
     tripForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!tripDateInput.value) { alert('Por favor, selecione a data da viagem.'); return; }
-        const newTrip = { 
+        if (!tripDateInput.value) {
+            alert('Por favor, selecione a data da viagem.');
+            return;
+        }
+        const tripData = { 
             userFare: parseFloat(userFareInput.value),
             uberFee: parseFloat(uberFeeInput.value),
-            tripDate: new Date(tripDateInput.value),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            tripDate: new Date(tripDateInput.value)
         };
-        await addTrip(newTrip);
-        tripForm.reset();
-        tripDateInput.valueAsDate = new Date();
+        if (editingTripId) {
+            await updateTrip(editingTripId, tripData);
+        } else {
+            const newTrip = { ...tripData, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+            await addTrip(newTrip);
+        }
+        cancelEditMode();
     });
+
+    tripList.addEventListener('click', (e) => {
+        const targetButton = e.target.closest('.action-btn');
+        if (!targetButton) return;
+        const tripId = targetButton.getAttribute('data-id');
+        if (targetButton.classList.contains('edit-btn')) { startEditMode(tripId); }
+        if (targetButton.classList.contains('delete-btn')) { deleteTrip(tripId); }
+    });
+    
+    cancelEditBtn.addEventListener('click', cancelEditMode);
+
+    loginLink.addEventListener('click', (e) => { e.preventDefault(); signInWithGoogle(); });
+    
     dateFilter.addEventListener('change', () => {
         if(dateFilter.value === 'custom') { customDateRange.style.display = 'flex'; }
         else { customDateRange.style.display = 'none'; applyFilters(); }
     });
+    
     startDateInput.addEventListener('change', applyFilters);
     endDateInput.addEventListener('change', applyFilters);
-    tripList.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-btn')) { const tripId = e.target.getAttribute('data-id'); deleteTrip(tripId); }
-    });
+    
     loginButton.addEventListener('click', signInWithGoogle);
     logoutButton.addEventListener('click', signOut);
     resetButton.addEventListener('click', resetData);
+    
     suggestionFab.addEventListener('click', () => { suggestionModal.style.display = 'flex'; });
     modalCloseBtn.addEventListener('click', () => { suggestionModal.style.display = 'none'; });
     suggestionModal.addEventListener('click', (e) => { if (e.target === suggestionModal) { suggestionModal.style.display = 'none'; } });
+    
     suggestionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const suggestionContent = suggestionText.value.trim();

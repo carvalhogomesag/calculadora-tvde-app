@@ -466,3 +466,32 @@ h1, h2 {
     box-sizing: border-box;
     resize: vertical;
 }
+
+/* Estilo para os botões de ação na tabela */
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 5px;
+}
+
+.edit-btn {
+    color: var(--accent-color); /* Roxo */
+}
+
+.delete-btn {
+    color: var(--danger-color); /* Vermelho */
+}
+
+/* Estilo para o botão secundário (Cancelar Edição) */
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    margin-top: 10px;
+}
+
+.btn-secondary:hover {
+    background-color: var(--border-color);
+}
