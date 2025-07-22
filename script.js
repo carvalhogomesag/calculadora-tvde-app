@@ -21,9 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error.code !== 'auth/cancelled-popup-request') alert(`Erro ao tentar fazer login: ${error.message}`);
         });
     };
-    const signOut = () => { firebase.auth().signOut(); };
+    const signOut = () => {
+        firebase.auth().signOut();
+    };
 
     // --- 2. SELETORES DE ELEMENTOS HTML ---
+    const adminPanelBtn = document.getElementById('admin-panel-btn');
     const formTitle = document.getElementById('form-title');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const guestWarning = document.getElementById('guest-warning');
@@ -54,45 +57,71 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalCloseBtn = document.querySelector('.modal-close-btn');
 
     // --- 3. ESTADO DA APLICAÇÃO ---
-    let allTrips = []; 
-    let filteredTrips = []; 
+    let allTrips = [];
+    let filteredTrips = [];
     let currentUser = null;
     let earningsChart = null;
     let operationMode = 'local';
     let editingTripId = null;
     let activeFilter = 'this-week';
+    let originalModalContent = suggestionModal.querySelector('.modal-content').innerHTML;
 
     // --- 4. FUNÇÕES DE DADOS ---
     const loadTrips = async () => {
         if (operationMode === 'firestore' && currentUser) {
             const snapshot = await db.collection('trips').doc(currentUser.uid).collection('user_trips').orderBy('tripDate', 'desc').get();
-            allTrips = snapshot.docs.map(doc => { const data = doc.data(); return { id: doc.id, ...data, tripDate: data.tripDate.toDate() }; });
+            allTrips = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return { id: doc.id, ...data, tripDate: data.tripDate.toDate() };
+            });
         }
         applyFilters();
     };
+
     const addTrip = async (trip) => {
-        if (operationMode === 'firestore') { await db.collection('trips').doc(currentUser.uid).collection('user_trips').add(trip); }
-        else { const tripWithId = { ...trip, id: Date.now().toString() }; allTrips.push(tripWithId); }
+        if (operationMode === 'firestore') {
+            await db.collection('trips').doc(currentUser.uid).collection('user_trips').add(trip);
+        } else {
+            const tripWithId = { ...trip, id: Date.now().toString() };
+            allTrips.push(tripWithId);
+        }
         await loadTrips();
     };
+
     const deleteTrip = async (tripId) => {
         if (!confirm('Tem a certeza que quer apagar esta viagem?')) return;
-        if (operationMode === 'firestore') { await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).delete(); }
-        else { allTrips = allTrips.filter(t => t.id !== tripId); }
+        if (operationMode === 'firestore') {
+            await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).delete();
+        } else {
+            allTrips = allTrips.filter(t => t.id !== tripId);
+        }
         await loadTrips();
     };
+
     const resetData = async () => {
         if (!confirm('Tem a certeza que quer apagar TODOS os dados do período?')) return;
-        if (operationMode === 'firestore') { alert('A função de apagar todos os dados da nuvem está em desenvolvimento.'); return; }
-        else { allTrips = []; filteredTrips = []; }
+        if (operationMode === 'firestore') {
+            alert('A função de apagar todos os dados da nuvem está em desenvolvimento.');
+            return;
+        } else {
+            allTrips = [];
+            filteredTrips = [];
+        }
         updateUI();
     };
+
     const updateTrip = async (tripId, updatedData) => {
-        if (operationMode === 'firestore') { await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).update(updatedData); }
-        else { const tripIndex = allTrips.findIndex(t => t.id === tripId); if (tripIndex > -1) { allTrips[tripIndex] = { ...allTrips[tripIndex], ...updatedData }; } }
+        if (operationMode === 'firestore') {
+            await db.collection('trips').doc(currentUser.uid).collection('user_trips').doc(tripId).update(updatedData);
+        } else {
+            const tripIndex = allTrips.findIndex(t => t.id === tripId);
+            if (tripIndex > -1) {
+                allTrips[tripIndex] = { ...allTrips[tripIndex], ...updatedData };
+            }
+        }
         await loadTrips();
     };
-    
+
     // --- 5. LÓGICA DE FILTROS E UI ---
     const startEditMode = (tripId) => {
         editingTripId = tripId;
@@ -139,7 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 start = startDateInput.value ? new Date(startDateInput.value + 'T00:00:00') : null;
                 end = endDateInput.value ? new Date(endDateInput.value + 'T23:59:59') : null;
                 if (start && !end) end = new Date(start.getTime() + (24 * 60 * 60 * 1000 - 1));
-                if (!start && end) { start = new Date(endDateInput.value + 'T00:00:00'); end = new Date(endDateInput.value + 'T23:59:59'); }
+                if (!start && end) {
+                    start = new Date(endDateInput.value + 'T00:00:00');
+                    end = new Date(endDateInput.value + 'T23:59:59');
+                }
                 break;
         }
         return { start, end };
@@ -158,17 +190,24 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     };
 
-    const updateUI = () => { updateSummaryAndList(); updateChart(); };
-    
+    const updateUI = () => {
+        updateSummaryAndList();
+        updateChart();
+    };
+
     const updateSummaryAndList = () => {
         tripList.innerHTML = '';
-        filteredTrips.sort((a,b) => b.tripDate - a.tripDate).forEach(trip => {
+        filteredTrips.sort((a, b) => b.tripDate - a.tripDate).forEach(trip => {
             const row = document.createElement('tr');
             const commissionPercentage = trip.userFare > 0 ? (trip.uberFee / trip.userFare) * 100 : 0;
             const formattedDate = trip.tripDate.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' });
             row.innerHTML = `<td>${formattedDate}</td><td>${trip.userFare.toFixed(2)} €</td><td>${trip.uberFee.toFixed(2)} €</td><td>${commissionPercentage.toFixed(1)} %</td><td><button class="action-btn edit-btn" data-id="${trip.id}" title="Editar">✏️</button><button class="action-btn delete-btn" data-id="${trip.id}" title="Apagar">🗑️</button></td>`;
-            if (trip.uberFee < 0) { row.cells[2].style.color = 'var(--danger-color)'; row.cells[3].style.color = 'var(--danger-color)'; }
-            else if (commissionPercentage > 25) { row.cells[3].style.color = 'var(--warning-color)'; }
+            if (trip.uberFee < 0) {
+                row.cells[2].style.color = 'var(--danger-color)';
+                row.cells[3].style.color = 'var(--danger-color)';
+            } else if (commissionPercentage > 25) {
+                row.cells[3].style.color = 'var(--warning-color)';
+            }
             tripList.appendChild(row);
         });
         const totalUserFare = filteredTrips.reduce((sum, trip) => sum + trip.userFare, 0);
@@ -177,11 +216,17 @@ document.addEventListener('DOMContentLoaded', () => {
         totalUserFareEl.textContent = `${totalUserFare.toFixed(2)} €`;
         totalUberFeeEl.textContent = `${totalUberFee.toFixed(2)} €`;
         averageCommissionEl.textContent = `${averageCommission.toFixed(2)} %`;
-        if (averageCommission > 25) averageCommissionEl.style.color = 'var(--danger-color)'; else if (averageCommission > 22) averageCommissionEl.style.color = 'var(--warning-color)'; else averageCommissionEl.style.color = 'var(--success-color)';
+        if (averageCommission > 25) averageCommissionEl.style.color = 'var(--danger-color)';
+        else if (averageCommission > 22) averageCommissionEl.style.color = 'var(--warning-color)';
+        else averageCommissionEl.style.color = 'var(--success-color)';
     };
 
     const updateChart = () => {
-        if (filteredTrips.length === 0) { if (earningsChart) { earningsChart.destroy(); earningsChart = null; } chartCanvas.style.display = 'none'; return; }
+        if (filteredTrips.length === 0) {
+            if (earningsChart) { earningsChart.destroy(); earningsChart = null; }
+            chartCanvas.style.display = 'none';
+            return;
+        }
         chartCanvas.style.display = 'block';
         const totalUserFare = filteredTrips.reduce((sum, trip) => sum + trip.userFare, 0);
         const totalUberFee = filteredTrips.reduce((sum, trip) => sum + trip.uberFee, 0);
@@ -196,7 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'doughnut',
             data: chartData,
             options: {
-                responsive: true, maintainAspectRatio: false,
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'top', labels: { color: '#e2e8f0' } },
                     datalabels: {
@@ -205,25 +251,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             const percentage = total > 0 ? (value / total * 100).toFixed(1) + '%' : '0%';
                             return `€${value.toFixed(2)}\n(${percentage})`;
                         },
-                        color: '#fff', font: { weight: 'bold', size: 14 }, textAlign: 'center',
+                        color: '#fff',
+                        font: { weight: 'bold', size: 14 },
+                        textAlign: 'center',
                     }
                 }
             }
         });
     };
 
-    // --- 6. LÓGICA DE AUTENTICAÇÃO ---
-    auth.onAuthStateChanged(user => {
+    // --- 6. LÓGICA DE AUTENTICAÇÃO E ADMIN ---
+    auth.onAuthStateChanged(async user => {
         currentUser = user;
+        adminPanelBtn.style.display = 'none';
         if (user) {
             operationMode = 'firestore';
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             userEmailEl.textContent = user.email;
             guestWarning.style.display = 'none';
+
+            const idTokenResult = await user.getIdTokenResult(true);
+            if (idTokenResult.claims.admin) {
+                console.log("Utilizador é um Administrador!");
+                adminPanelBtn.style.display = 'inline-block';
+            }
         } else {
             operationMode = 'local';
-            allTrips = []; 
+            allTrips = [];
             cancelEditMode();
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
@@ -234,6 +289,85 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 7. EVENT LISTENERS ---
+    const handleSuggestionSubmit = async (e) => {
+        e.preventDefault();
+        const suggestionContent = document.getElementById('suggestion-text').value.trim();
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        if (!suggestionContent) { alert('Por favor, escreva a sua sugestão.'); return; }
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando...';
+        try {
+            await db.collection('suggestions').add({ text: suggestionContent, submittedAt: firebase.firestore.FieldValue.serverTimestamp(), userEmail: currentUser ? currentUser.email : 'Anónimo', userAgent: navigator.userAgent });
+            alert('Obrigado! A sua sugestão foi enviada com sucesso.');
+            document.getElementById('suggestion-text').value = '';
+            suggestionModal.style.display = 'none';
+        } catch (error) {
+            console.error("Erro ao enviar sugestão:", error);
+            alert('Ocorreu um erro ao enviar a sua sugestão. Por favor, tente novamente.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Enviar Sugestão';
+        }
+    };
+
+    adminPanelBtn.addEventListener('click', async () => {
+        try {
+            const snapshot = await db.collection('suggestions').orderBy('submittedAt', 'desc').get();
+            let suggestionsHTML = '<h2>Sugestões Recebidas</h2>';
+            if (snapshot.empty) {
+                suggestionsHTML += '<p>Nenhuma sugestão recebida ainda.</p>';
+            } else {
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    suggestionsHTML += `<div class="suggestion-item" style="border-bottom: 1px solid #334155; padding: 10px 0; margin-bottom: 10px;">
+                                            <p style="margin: 0 0 5px 0;"><strong>De:</strong> ${data.userEmail || 'Anónimo'}</p>
+                                            <p style="margin: 0 0 10px 0; font-size: 12px; color: #94a3b8;">${data.submittedAt.toDate().toLocaleString('pt-PT')}</p>
+                                            <p style="margin: 0; white-space: pre-wrap;">${data.text}</p>
+                                        </div>`;
+                });
+            }
+            const modalContent = suggestionModal.querySelector('.modal-content');
+            modalContent.innerHTML = `<button class="modal-close-btn">×</button>${suggestionsHTML}`;
+            suggestionModal.style.display = 'flex';
+            modalContent.querySelector('.modal-close-btn').addEventListener('click', () => {
+                suggestionModal.style.display = 'none';
+                modalContent.innerHTML = originalModalContent;
+                suggestionModal.querySelector('#suggestion-form').addEventListener('submit', handleSuggestionSubmit);
+                suggestionModal.querySelector('.modal-close-btn').addEventListener('click', () => suggestionModal.style.display = 'none');
+            });
+        } catch (error) {
+            console.error("Erro ao carregar sugestões:", error);
+            alert("Você não tem permissão para ver as sugestões ou ocorreu um erro.");
+        }
+    });
+
+    tripForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!tripDateInput.value) { alert('Por favor, selecione a data da viagem.'); return; }
+        const tripData = {
+            userFare: parseFloat(userFareInput.value),
+            uberFee: parseFloat(uberFeeInput.value),
+            tripDate: new Date(tripDateInput.value)
+        };
+        if (editingTripId) {
+            await updateTrip(editingTripId, tripData);
+        } else {
+            const newTrip = { ...tripData, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+            await addTrip(newTrip);
+        }
+        cancelEditMode();
+    });
+
+    tripList.addEventListener('click', (e) => {
+        const targetButton = e.target.closest('.action-btn');
+        if (!targetButton) return;
+        const tripId = targetButton.getAttribute('data-id');
+        if (targetButton.classList.contains('edit-btn')) { startEditMode(tripId); }
+        if (targetButton.classList.contains('delete-btn')) { deleteTrip(tripId); }
+    });
+
+    cancelEditBtn.addEventListener('click', cancelEditMode);
+    loginLink.addEventListener('click', (e) => { e.preventDefault(); signInWithGoogle(); });
     filterButtonsContainer.addEventListener('click', (e) => {
         const clickedButton = e.target.closest('.filter-btn');
         if (clickedButton) {
@@ -251,57 +385,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startDateInput.addEventListener('change', applyFilters);
     endDateInput.addEventListener('change', applyFilters);
-
-    tripForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!tripDateInput.value) { alert('Por favor, selecione a data da viagem.'); return; }
-        const tripData = { 
-            userFare: parseFloat(userFareInput.value),
-            uberFee: parseFloat(uberFeeInput.value),
-            tripDate: new Date(tripDateInput.value)
-        };
-        if (editingTripId) { await updateTrip(editingTripId, tripData); }
-        else { const newTrip = { ...tripData, createdAt: firebase.firestore.FieldValue.serverTimestamp() }; await addTrip(newTrip); }
-        cancelEditMode();
-    });
-
-    tripList.addEventListener('click', (e) => {
-        const targetButton = e.target.closest('.action-btn');
-        if (!targetButton) return;
-        const tripId = targetButton.getAttribute('data-id');
-        if (targetButton.classList.contains('edit-btn')) { startEditMode(tripId); }
-        if (targetButton.classList.contains('delete-btn')) { deleteTrip(tripId); }
-    });
-    
-    cancelEditBtn.addEventListener('click', cancelEditMode);
-    loginLink.addEventListener('click', (e) => { e.preventDefault(); signInWithGoogle(); });
     loginButton.addEventListener('click', signInWithGoogle);
     logoutButton.addEventListener('click', signOut);
     resetButton.addEventListener('click', resetData);
-    suggestionFab.addEventListener('click', () => { suggestionModal.style.display = 'flex'; });
-    modalCloseBtn.addEventListener('click', () => { suggestionModal.style.display = 'none'; });
-    suggestionModal.addEventListener('click', (e) => { if (e.target === suggestionModal) { suggestionModal.style.display = 'none'; } });
-    suggestionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const suggestionContent = suggestionText.value.trim();
-        const submitButton = suggestionForm.querySelector('button[type="submit"]');
-        if (!suggestionContent) { alert('Por favor, escreva a sua sugestão.'); return; }
-        submitButton.disabled = true;
-        submitButton.textContent = 'Enviando...';
-        try {
-            await db.collection('suggestions').add({
-                text: suggestionContent, submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                userEmail: currentUser ? currentUser.email : 'Anónimo', userAgent: navigator.userAgent
-            });
-            alert('Obrigado! A sua sugestão foi enviada com sucesso.');
-            suggestionText.value = ''; suggestionModal.style.display = 'none';
-        } catch (error) {
-            console.error("Erro ao enviar sugestão:", error);
-            alert('Ocorreu um erro ao enviar a sua sugestão. Por favor, tente novamente.');
-        } finally {
-            submitButton.disabled = false; submitButton.textContent = 'Enviar Sugestão';
+
+    suggestionFab.addEventListener('click', () => {
+        const modalContent = suggestionModal.querySelector('.modal-content');
+        if (!modalContent.querySelector('#suggestion-form')) {
+            modalContent.innerHTML = originalModalContent;
+            // Re-adicionar os listeners ao formulário restaurado
+            modalContent.querySelector('#suggestion-form').addEventListener('submit', handleSuggestionSubmit);
+            modalContent.querySelector('.modal-close-btn').addEventListener('click', () => suggestionModal.style.display = 'none');
+        }
+        suggestionModal.style.display = 'flex';
+    });
+
+    modalCloseBtn.addEventListener('click', () => {
+        suggestionModal.style.display = 'none';
+    });
+    
+    suggestionModal.addEventListener('click', (e) => {
+        if (e.target === suggestionModal) {
+            suggestionModal.style.display = 'none';
         }
     });
+    
+    suggestionForm.addEventListener('submit', handleSuggestionSubmit);
 
     tripDateInput.valueAsDate = new Date();
 });
