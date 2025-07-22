@@ -2,22 +2,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. CONFIGURAÇÃO DO FIREBASE ---
     const firebaseConfig = {
-        apiKey: "AIzaSyDMmwP7dGwwi38ZCH_zWFPCUERjb95do6U",
-        authDomain: "calculadora-tvde.firebaseapp.com",
-        projectId: "calculadora-tvde",
-        storageBucket: "calculadora-tvde.firebasestorage.app",
-        messagingSenderId: "358758507490",
-        appId: "1:358758507490:web:40f8105d5ddb1438b24fbb"
+      apiKey: "AIzaSyDMmwP7dGwwi38ZCH_zWFPCUERjb95do6U",
+      authDomain: "calculadora-tvde.firebaseapp.com",
+      projectId: "calculadora-tvde",
+      storageBucket: "calculadora-tvde.firebasestorage.app",
+      messagingSenderId: "358758507490",
+      appId: "1:358758507490:web:40f8105d5ddb1438b24fbb"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- FUNÇÕES DE AUTENTICAÇÃO ---
+    // --- FUNÇÕES DE AUTENTICAÇÃO (VOLTAMOS PARA O POP-UP) ---
     const signInWithGoogle = () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithRedirect(provider);
+        auth.signInWithPopup(provider).catch(error => { // <<< MUDANÇA: de volta para signInWithPopup
+            console.error("Erro no login com Google:", error);
+            // Os erros de pop-up que vimos antes (auth/cancelled-popup-request) podem voltar, mas o login deve funcionar.
+            if (error.code !== 'auth/cancelled-popup-request') {
+                alert(`Erro ao tentar fazer login: ${error.message}`);
+            }
+        });
     };
 
     const signOut = () => {
@@ -25,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- 2. SELETORES DE ELEMENTOS HTML ---
-    const authLoader = document.getElementById('auth-loader'); // Assumindo que adicionou o loader ao HTML
+    // (Não há loader de autenticação aqui, pois o pop-up não recarrega a página)
     const guestWarning = document.getElementById('guest-warning');
     const loginLink = document.getElementById('login-link');
     const tripForm = document.getElementById('trip-form');
@@ -60,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let earningsChart = null;
     let operationMode = 'local';
 
-    // --- 4. FUNÇÕES DE DADOS (NÃO MUDAM) ---
+    // --- 4. FUNÇÕES DE DADOS ---
     const loadTrips = async () => {
         if (operationMode === 'firestore' && currentUser) {
             const snapshot = await db.collection('trips').doc(currentUser.uid).collection('user_trips').orderBy('tripDate', 'desc').get();
@@ -101,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     };
 
-    // --- 5. LÓGICA DE FILTROS E UI (NÃO MUDAM) ---
+    // --- 5. LÓGICA DE FILTROS E UI ---
     const getDatesForFilter = (filterValue) => {
         const now = new Date();
         let start, end;
@@ -184,102 +190,78 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- NOVA ESTRUTURA DE INICIALIZAÇÃO ---
-    function initializeApp() {
-        // Lógica de autenticação
-        auth.getRedirectResult().catch((error) => {
-            console.error("Erro no retorno do redirect:", error.code, error.message);
-        });
+    // --- 6. LÓGICA DE AUTENTICAÇÃO (SIMPLIFICADA, SEM PERSISTÊNCIA MANUAL) ---
+    auth.onAuthStateChanged(user => {
+        currentUser = user;
+        if (user) {
+            operationMode = 'firestore';
+            loginButton.style.display = 'none';
+            userInfo.style.display = 'flex';
+            userEmailEl.textContent = user.email;
+            guestWarning.style.display = 'none';
+        } else {
+            operationMode = 'local';
+            allTrips = []; 
+            loginButton.style.display = 'block';
+            userInfo.style.display = 'none';
+            userEmailEl.textContent = '';
+            guestWarning.style.display = 'block';
+        }
+        // Carrega os dados para o estado atual (logado ou não)
+        loadTrips();
+    });
 
-        auth.onAuthStateChanged(user => {
-            currentUser = user;
-            if (user) {
-                operationMode = 'firestore';
-                loginButton.style.display = 'none';
-                userInfo.style.display = 'flex';
-                userEmailEl.textContent = user.email;
-                guestWarning.style.display = 'none';
-            } else {
-                operationMode = 'local';
-                allTrips = []; 
-                loginButton.style.display = 'block';
-                userInfo.style.display = 'none';
-                userEmailEl.textContent = '';
-                guestWarning.style.display = 'block';
-            }
-            
-            loadTrips().then(() => {
-                if (authLoader) {
-                    authLoader.style.opacity = '0';
-                    setTimeout(() => { authLoader.style.display = 'none'; }, 300);
-                }
-            });
-        });
-
-        // Listeners de eventos
-        loginLink.addEventListener('click', (e) => { e.preventDefault(); signInWithGoogle(); });
-        tripForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!tripDateInput.value) { alert('Por favor, selecione a data da viagem.'); return; }
-            const newTrip = { 
-                userFare: parseFloat(userFareInput.value),
-                uberFee: parseFloat(uberFeeInput.value),
-                tripDate: new Date(tripDateInput.value),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            await addTrip(newTrip);
-            tripForm.reset();
-            tripDateInput.valueAsDate = new Date();
-        });
-        dateFilter.addEventListener('change', () => {
-            if(dateFilter.value === 'custom') { customDateRange.style.display = 'flex'; }
-            else { customDateRange.style.display = 'none'; applyFilters(); }
-        });
-        startDateInput.addEventListener('change', applyFilters);
-        endDateInput.addEventListener('change', applyFilters);
-        tripList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-btn')) { const tripId = e.target.getAttribute('data-id'); deleteTrip(tripId); }
-        });
-        loginButton.addEventListener('click', signInWithGoogle);
-        logoutButton.addEventListener('click', signOut);
-        resetButton.addEventListener('click', resetData);
-        suggestionFab.addEventListener('click', () => { suggestionModal.style.display = 'flex'; });
-        modalCloseBtn.addEventListener('click', () => { suggestionModal.style.display = 'none'; });
-        suggestionModal.addEventListener('click', (e) => { if (e.target === suggestionModal) { suggestionModal.style.display = 'none'; } });
-        suggestionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const suggestionContent = suggestionText.value.trim();
-            const submitButton = suggestionForm.querySelector('button[type="submit"]');
-            if (!suggestionContent) { alert('Por favor, escreva a sua sugestão.'); return; }
-            submitButton.disabled = true;
-            submitButton.textContent = 'Enviando...';
-            try {
-                await db.collection('suggestions').add({
-                    text: suggestionContent, submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    userEmail: currentUser ? currentUser.email : 'Anónimo', userAgent: navigator.userAgent
-                });
-                alert('Obrigado! A sua sugestão foi enviada com sucesso.');
-                suggestionText.value = ''; suggestionModal.style.display = 'none';
-            } catch (error) {
-                console.error("Erro ao enviar sugestão:", error);
-                alert('Ocorreu um erro ao enviar a sua sugestão. Por favor, tente novamente.');
-            } finally {
-                submitButton.disabled = false; submitButton.textContent = 'Enviar Sugestão';
-            }
-        });
-
+    // --- 7. EVENT LISTENERS ---
+    loginLink.addEventListener('click', (e) => { e.preventDefault(); signInWithGoogle(); });
+    tripForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!tripDateInput.value) { alert('Por favor, selecione a data da viagem.'); return; }
+        const newTrip = { 
+            userFare: parseFloat(userFareInput.value),
+            uberFee: parseFloat(uberFeeInput.value),
+            tripDate: new Date(tripDateInput.value),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await addTrip(newTrip);
+        tripForm.reset();
         tripDateInput.valueAsDate = new Date();
-    }
+    });
+    dateFilter.addEventListener('change', () => {
+        if(dateFilter.value === 'custom') { customDateRange.style.display = 'flex'; }
+        else { customDateRange.style.display = 'none'; applyFilters(); }
+    });
+    startDateInput.addEventListener('change', applyFilters);
+    endDateInput.addEventListener('change', applyFilters);
+    tripList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn')) { const tripId = e.target.getAttribute('data-id'); deleteTrip(tripId); }
+    });
+    loginButton.addEventListener('click', signInWithGoogle);
+    logoutButton.addEventListener('click', signOut);
+    resetButton.addEventListener('click', resetData);
+    suggestionFab.addEventListener('click', () => { suggestionModal.style.display = 'flex'; });
+    modalCloseBtn.addEventListener('click', () => { suggestionModal.style.display = 'none'; });
+    suggestionModal.addEventListener('click', (e) => { if (e.target === suggestionModal) { suggestionModal.style.display = 'none'; } });
+    suggestionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const suggestionContent = suggestionText.value.trim();
+        const submitButton = suggestionForm.querySelector('button[type="submit"]');
+        if (!suggestionContent) { alert('Por favor, escreva a sua sugestão.'); return; }
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando...';
+        try {
+            await db.collection('suggestions').add({
+                text: suggestionContent, submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                userEmail: currentUser ? currentUser.email : 'Anónimo', userAgent: navigator.userAgent
+            });
+            alert('Obrigado! A sua sugestão foi enviada com sucesso.');
+            suggestionText.value = ''; suggestionModal.style.display = 'none';
+        } catch (error) {
+            console.error("Erro ao enviar sugestão:", error);
+            alert('Ocorreu um erro ao enviar a sua sugestão. Por favor, tente novamente.');
+        } finally {
+            submitButton.disabled = false; submitButton.textContent = 'Enviar Sugestão';
+        }
+    });
 
-    // --- PONTO DE ENTRADA PRINCIPAL ---
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .then(() => {
-        // Só depois de a persistência estar garantida é que inicializamos a app
-        initializeApp();
-      })
-      .catch((error) => {
-        console.error("Erro ao definir a persistência:", error);
-        // Se a persistência falhar, ainda tentamos continuar
-        initializeApp();
-      });
+    tripDateInput.valueAsDate = new Date();
 });
