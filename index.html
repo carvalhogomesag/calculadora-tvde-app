@@ -9,11 +9,16 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="apple-touch-icon" href="icon-192x192.png">
     
+    <!-- 1. Carrega o CSS do CookieConsent -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.0.1/dist/cookieconsent.css">
     <link rel="stylesheet" href="style.css">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 2. Carrega o SCRIPT do CookieConsent (com defer) -->
+    <script defer src="https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.0.1/dist/cookieconsent.umd.js"></script>
 
     <!-- Google tag (gtag.js) MODIFICADO PARA CONSENTIMENTO -->
     <script type="text/plain" data-cookiecategory="analytics" async src="https://www.googletagmanager.com/gtag/js?id=G-NJJGQEHX0H"></script>
@@ -25,6 +30,7 @@
       gtag('config', 'G-NJJGQEHX0H');
     </script>
     <!-- Fim da tag do Google -->
+
 </head>
 <body>
     <div class="container">
@@ -154,51 +160,6 @@
         </div>
     </div>
     
-    <!-- Scripts movidos para o final do <body> -->
-    
-    <script type="module">
-        // Importa e executa o CookieConsent aqui
-        import 'https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.0.1/dist/cookieconsent.css';
-        import { run } from 'https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.0.1/dist/cookieconsent.umd.js';
-
-        run({
-            guiOptions: {
-                consentModal: { layout: 'box', position: 'bottom left' },
-                preferencesModal: { layout: 'box', position: 'right' }
-            },
-            categories: {
-                necessary: { readOnly: true },
-                analytics: {}
-            },
-            language: {
-                default: 'pt',
-                translations: {
-                    pt: {
-                        consentModal: {
-                            title: 'Olá! Usamos cookies.',
-                            description: 'Utilizamos cookies para analisar o tráfego do site e otimizar a sua experiência. Ao aceitar, os seus dados serão agregados com os de outros utilizadores de forma anónima.',
-                            acceptAllBtn: 'Aceitar todos',
-                            acceptNecessaryBtn: 'Rejeitar todos',
-                            showPreferencesBtn: 'Gerir preferências'
-                        },
-                        preferencesModal: {
-                            title: 'Preferências de Consentimento',
-                            acceptAllBtn: 'Aceitar todos',
-                            acceptNecessaryBtn: 'Rejeitar todos',
-                            savePreferencesBtn: 'Guardar preferências',
-                            closeIconLabel: 'Fechar modal',
-                            sections: [
-                                { title: 'Uso de Cookies', description: 'Usamos cookies para garantir as funcionalidades básicas do site e melhorar a sua experiência. Pode escolher que categorias aceita.' },
-                                { title: 'Cookies estritamente necessários', description: 'Estes cookies são essenciais para o funcionamento do site e não podem ser desativados.', linkedCategory: 'necessary' },
-                                { title: 'Cookies de Análise e Desempenho', description: 'Estes cookies permitem-nos recolher dados anónimos sobre como os utilizadores interagem com a aplicação, ajudando-nos a melhorar.', linkedCategory: 'analytics' }
-                            ]
-                        }
-                    }
-                }
-            }
-        });
-    </script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
@@ -214,5 +175,48 @@
           });
         }
     </script>
+
+    <!-- BLOCO DE CONFIGURAÇÃO DO COOKIECONSENT (SIMPLES E ROBUSTO) -->
+    <script>
+        window.addEventListener('load', function(){
+            CookieConsent.run({
+                guiOptions: {
+                    consentModal: { layout: 'box', position: 'bottom left' },
+                    preferencesModal: { layout: 'box', position: 'right' }
+                },
+                categories: {
+                    necessary: { readOnly: true },
+                    analytics: {}
+                },
+                language: {
+                    default: 'pt',
+                    translations: {
+                        pt: {
+                            consentModal: {
+                                title: 'Olá! Usamos cookies.',
+                                description: 'Utilizamos cookies para analisar o tráfego do site e otimizar a sua experiência. Ao aceitar, os seus dados serão agregados com os de outros utilizadores de forma anónima.',
+                                acceptAllBtn: 'Aceitar todos',
+                                acceptNecessaryBtn: 'Rejeitar todos',
+                                showPreferencesBtn: 'Gerir preferências'
+                            },
+                            preferencesModal: {
+                                title: 'Preferências de Consentimento',
+                                acceptAllBtn: 'Aceitar todos',
+                                acceptNecessaryBtn: 'Rejeitar todos',
+                                savePreferencesBtn: 'Guardar preferências',
+                                closeIconLabel: 'Fechar modal',
+                                sections: [
+                                    { title: 'Uso de Cookies', description: 'Usamos cookies para garantir as funcionalidades básicas do site e melhorar a sua experiência. Pode escolher que categorias aceita.' },
+                                    { title: 'Cookies estritamente necessários', description: 'Estes cookies são essenciais para o funcionamento do site e não podem ser desativados.', linkedCategory: 'necessary' },
+                                    { title: 'Cookies de Análise e Desempenho', description: 'Estes cookies permitem-nos recolher dados anónimos sobre como os utilizadores interagem com a aplicação, ajudando-nos a melhorar.', linkedCategory: 'analytics' }
+                                ]
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
 </body>
 </html>
